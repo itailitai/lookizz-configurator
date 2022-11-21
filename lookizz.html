@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css"
+      integrity="sha512-MV7K8+y+gLIBoVD59lQIYicR65iaqukzvf/nwasF0nqhPay5w/9lJmVM2hMDcnK1OnMGCdVK+iQrJ7lzPJQd1w=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <link rel="stylesheet" href="./object-gui.css" />
+    <link rel="stylesheet" href="./zipcreator.css" />
+  </head>
+  <body>
+    <button
+      id="undo"
+      onclick="undo()"
+      style="
+        position: absolute;
+        background: #fafafa;
+        border: none;
+        color: #cccccc;
+        padding: 5px;
+        border-radius: 10px;
+        top: 15px;
+        left: 20px;
+      "
+    >
+      Undo <i class="fa-solid fa-rotate-left"></i>
+    </button>
+    <pre id="pre">
+      <h1 style="position: absolute; left: 0; right: 0; margin: 0 auto; width: 200px; color: #8393a3;">Lookizz configurator</h1>
+      <h4 style="position: absolute; left: 0; right: 0; margin: auto; width: 200px; color: #556270; text-align: center; top: 50px; left: 70px;">Made by Itai</h4>
+      <code id="code">
+      </code>
+      </pre>
+    <div id="colorPreview"></div>
+    <div class="zipcreator">
+      <div id="dropContainer" data-index="1" class="drop_container">
+        Drop product images here
+        <input
+          id="fileupload1"
+          data-index="1"
+          class="file_input"
+          type="file"
+          multiple
+        />
+        <label for="fileupload1">Or select files</label>
+      </div>
+
+      <div id="dropContainer" data-index="2" class="drop_container">
+        Drop product models here
+        <input
+          id="fileupload2"
+          data-index="2"
+          class="file_input"
+          type="file"
+          multiple
+        />
+        <label for="fileupload2">Or select files</label>
+      </div>
+
+      <div id="dropContainer" data-index="3" class="drop_container">
+        Drop texure images here
+        <input
+          id="fileupload3"
+          data-index="3"
+          class="file_input"
+          type="file"
+          style="visibility: hidden"
+          multiple
+        />
+        <label for="fileupload3">Or select files</label>
+      </div>
+
+      <button onclick="generateZip()">Generate zip</button>
+    </div>
+    <script
+      async=""
+      defer=""
+      src="https://buttons.github.io/buttons.js"
+    ></script>
+    <script src="jszip.min.js"></script>
+    <script src="./object-gui.js"></script>
+    <script>
+      const mementos = [];
+
+      function saveMemento() {
+        mementos.push(data);
+        if (mementos.length > 1)
+          document.querySelector("#undo").style =
+            'position: absolute; background: #007bff; border: none; color: white; padding: 5px; border-radius: 10px; top: 15px; left: 20px;">Undo <i class="fa-solid fa-rotate-left';
+      }
+
+      function undo() {
+        if (mementos.length == 0) return;
+        if (mementos.length <= 1) {
+          document.querySelector("#undo").style =
+            'position: absolute; background: #fafafa; border: none; color: #cccccc; padding: 5px; border-radius: 10px; top: 15px; left: 20px;">Undo <i class="fa-solid fa-rotate-left';
+        } else {
+          document.querySelector("#undo").style =
+            'position: absolute; background: #007bff; border: none; color: white; padding: 5px; border-radius: 10px; top: 15px; left: 20px;">Undo <i class="fa-solid fa-rotate-left';
+        }
+
+        const lastMemento = mementos.pop();
+        data = lastMemento;
+
+        reinitialize_GUI();
+        update_code();
+      }
+
+      let code = document.getElementById("code");
+
+      const create_code_events = (code) => {
+        if (code.nodeName == "CODE") {
+          code.addEventListener("click", () => {
+            content = code.textContent;
+            if (content != "Paste your data here") {
+              var obj = JSON.parse(content);
+              var pretty = JSON.stringify(obj, undefined, 4);
+              code.outerHTML =
+                '<textarea id="code" cols=80 rows=30 >' +
+                pretty +
+                "</textarea>";
+            } else {
+              var obj = null;
+              var pretty = "Paste your data here";
+              code.outerHTML =
+                '<textarea id="code" cols=80 rows=30 placeholder="' +
+                pretty +
+                '""></textarea>';
+            }
+
+            document.getElementById("code").focus();
+            create_code_events(document.getElementById("code"));
+          });
+        }
+
+        code.addEventListener("blur", () => {
+          code.outerHTML = '<code id="code" >' + code.value + "</code>";
+          if (code.value == 0) {
+            document.getElementById("code").innerHTML = "Paste your data here";
+          }
+          create_code_events(document.getElementById("code"));
+        });
+
+        code.addEventListener("input", () => {
+          if (code.value.length == 0) {
+            data = null;
+            code.value = "";
+          } else {
+            if (code.value.startsWith("export const modelsMenu =")) {
+              code.value = code.value.replace("export const modelsMenu =", "");
+            }
+
+            data = JSON.parse(code.value);
+          }
+          reinitialize_GUI();
+
+          saveMemento();
+        });
+      };
+
+      create_code_events(code);
+
+      // // create an observer instance
+      // var observer = new MutationObserver(function (mutations) {
+      //   mutations.forEach(function (mutation) {
+      //     if (mutation.type === "characterData") {
+      //       data = JSON.parse(code.value)
+      //       reinitialize_GUI();
+      //     }
+      //   });
+      // });
+      // observer.observe(code, {
+      //   attributes: true,
+      //   characterData: true,
+      //   subtree: true,
+      // });
+      let data = {
+        "Model name": {
+          glbname: "file",
+          image: "imagename",
+          price: "50,000₪",
+          description: "sample description",
+          mainCategory: "Main Category",
+          subCategory: "Sub Category",
+          brand: "Brand name",
+          meshes: {
+            sample_mesh_name_0: {
+              guiName: "name_user_sees",
+              material: "material_name",
+              image: "mesh_image",
+              visibility: true,
+              colors: {
+                1: {
+                  texture: false,
+                  name: "red",
+                },
+                2: {
+                  texture: true,
+                  name: "candy",
+                },
+                3: {
+                  texture: false,
+                  name: "#2A2A2A",
+                },
+                4: {
+                  texture: true,
+                  name: "space",
+                },
+              },
+              variants: {
+                counter_dark: {
+                  image: "",
+                  colors: {
+                    1: {
+                      texture: false,
+                      name: "gray",
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      };
+
+      let editor = null;
+
+      const createNestedMenu = (parentElement, value) => {
+        for (productName in value) {
+          if (
+            typeof value[productName] === "object" &&
+            !Array.isArray(value[productName]) &&
+            value[productName] !== null
+          ) {
+            const group = parentElement
+              .addGroup(productName, productName, true)
+              .change(() => {
+                update_code();
+              });
+            group.duplicateButton.addEventListener("click", () => {
+              currName = group.duplicateButton.dataset.name;
+              createMainGroups(
+                parentElement,
+                currName + ".1",
+                value[currName + ".1"]
+              );
+            });
+            const deleteButton = document.createElement("button");
+            deleteButton.type = "button";
+            deleteButton.innerHTML = '<i class="fa-solid fa-trash-can"></i>';
+            deleteButton.dataset.name = name;
+            deleteButton.addEventListener("click", () => {
+              console.log(parentElement.data);
+              console.log(group);
+              console.log(parentElement.data[group.title]);
+              delete parentElement.data[group.title];
+              group.element.parentNode.removeChild(group.element);
+              update_code();
+            });
+            group.element
+              .querySelector(".editor-button-collapse")
+              .append(deleteButton);
+            createNestedMenu(group, value[productName]);
+          } else {
+            let type = "string";
+
+            if (
+              value[productName] === true ||
+              (value[productName] === false && value[productName].length != 0)
+            )
+              type = "boolean";
+            const property = parentElement
+              .addProperty(productName, productName, type)
+              .min(0)
+              .max(1)
+              .step(0.01)
+              .change(() => {
+                update_code();
+              });
+
+            const deleteButton = document.createElement("button");
+            deleteButton.type = "button";
+            deleteButton.innerHTML = '<i class="fa-solid fa-trash-can"></i>';
+            deleteButton.dataset.name = name;
+            deleteButton.addEventListener("click", () => {
+              console.log(parentElement.data);
+              console.log(property);
+              console.log(parentElement.data[property.name]);
+              delete parentElement.data[property.name];
+              property.element.parentNode.parentNode.removeChild(
+                property.element.parentNode
+              );
+              update_code();
+            });
+            property.element.parentNode.append(deleteButton);
+          }
+          // parentElement.append(sub_category);
+        }
+      };
+
+      createMainGroups = (parent, key, value) => {
+        const group = parent.addGroup(key, key, true).change(() => {
+          update_code();
+        });
+        group.duplicateButton.dataset.name = key;
+        group.duplicateButton.addEventListener("click", () => {
+          currName = group.duplicateButton.dataset.name;
+          createMainGroups(editor.root, currName + ".1", data[currName + ".1"]);
+        });
+        const deleteButton = document.createElement("button");
+        deleteButton.type = "button";
+        deleteButton.innerHTML = '<i class="fa-solid fa-trash-can"></i>';
+        deleteButton.dataset.name = name;
+        deleteButton.addEventListener("click", () => {
+          console.log(parent.data);
+          console.log(group);
+          console.log(parent.data[group.title]);
+          delete parent.data[group.title];
+          group.element.parentNode.removeChild(group.element);
+          update_code();
+        });
+        group.element
+          .querySelector(".editor-button-collapse")
+          .append(deleteButton);
+        createNestedMenu(group, value);
+      };
+
+      reinitialize_GUI = () => {
+        const editor_el = document.querySelector(".editor");
+        if (editor_el) editor_el.parentNode.removeChild(editor_el);
+        if (!data) return;
+        editor = new Editor("lookizz", "Lookizz Configurator", data);
+        editor.top().right();
+        editor.theme("blue");
+        document.querySelector("input").disabled = true;
+        document.querySelector("input").style.backgroundColor = "#202020";
+        Object.entries(data).forEach(([key, value]) => {
+          createMainGroups(editor.root, key, value);
+        });
+      };
+      if (data) {
+        saveMemento();
+        reinitialize_GUI();
+      }
+
+      update_code = () => {
+        code = document.getElementById("code");
+        if (!data) code.textContent = "Paste your data here";
+        else code.textContent = JSON.stringify(data, null, 4);
+      };
+      update_code();
+    </script>
+    <script src="zipcreator.js"></script>
+
+    <!-- <script>
+
+      const createNestedMenu = (parentElement, value) => {
+        for (productName in value) {
+          const sub_category = document.createElement("div");
+          sub_category.innerHTML = productName;
+          sub_category.className = "sub_cat";
+          console.log(value[productName], " ", value[productName].length);
+          if (
+            typeof value[productName] === "object" &&
+            !Array.isArray(value[productName]) &&
+            value[productName] !== null
+          ) {
+            createNestedMenu(sub_category, value[productName]);
+          } else {
+            const input = document.createElement("input");
+            input.type = "text";
+            input.value = value[productName];
+            sub_category.append(input);
+          }
+          parentElement.append(sub_category);
+        }
+      };
+
+      Object.entries(modelsMenu).forEach(([key, value]) => {
+        const product = document.createElement("div");
+        product.innerHTML = key;
+        product.className = "product";
+        createNestedMenu(product, value);
+        document.body.append(product);
+      });
+    </script> -->
+  </body>
+</html>
